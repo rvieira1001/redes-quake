@@ -11,8 +11,13 @@ config_version=5
 [application]
 
 config/name="Quake Redes"
+run/main_scene="uid://bwc5bmwnefhyu"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+CLIENT="*uid://7qwm2u3esycd"
 
 [physics]
 

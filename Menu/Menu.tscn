@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://bwc5bmwnefhyu"]
+
+[ext_resource type="Script" uid="uid://c8por0ubweill" path="res://Menu/menu.gd" id="1_jf1j2"]
+
+[node name="Menu" type="Control" unique_id=1162696484]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_jf1j2")
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=660270448]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=497715097]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="lable_infoLocal" type="Label" parent="CenterContainer/VBoxContainer" unique_id=683602420]
+layout_mode = 2
+text = "Informação local
+(Cliente)"
+horizontal_alignment = 1
+
+[node name="input_playerName" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1214328427]
+layout_mode = 2
+placeholder_text = "Nome do Jogador"
+alignment = 1
+max_length = 16
+
+[node name="input_portaLocal" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1608662680]
+layout_mode = 2
+placeholder_text = "Porta local"
+alignment = 1
+
+[node name="label_infoServer" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1228724657]
+layout_mode = 2
+text = "Informação do destino
+(Servidor)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="input_ipServer" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1916162811]
+layout_mode = 2
+placeholder_text = "Endereço do server"
+alignment = 1
+
+[node name="input_portaServer" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=472787671]
+layout_mode = 2
+placeholder_text = "Porta do server"
+alignment = 1
+
+[node name="bt_connect" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1124263706]
+layout_mode = 2
+text = "Connect"
+
+[node name="label_conexao" type="Label" parent="CenterContainer/VBoxContainer" unique_id=678334107]
+layout_mode = 2
+text = "Conexão"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="input_msg" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1474014834]
+layout_mode = 2
+placeholder_text = "Mensagem"
+alignment = 1
+
+[node name="bt_sendMsg" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1183374497]
+layout_mode = 2
+text = "Enviar"
+
+[connection signal="pressed" from="CenterContainer/VBoxContainer/bt_connect" to="." method="_on_bt_connect_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/bt_sendMsg" to="." method="_on_bt_send_msg_pressed"]
