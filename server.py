@@ -3,6 +3,9 @@
 from socket import *
 import sys  # Para encerrar o programa
 
+import random
+import json
+
 
 # Importar threading para usar no TCP, a ideia é manter um servidor sempre aceitando novas conexões,
 # e usar uma thread nova para cada conexão já formada, sem ficar com o código preso no loop do aaccept()
@@ -11,33 +14,183 @@ import threading
 # Cria uma lista pra salvar as conexões TCP, e enviar para todas sempre que precisar
 clientes = []
 
+class Player:
+    def __init__(self, addr: socket, name: str):
+        self.addr = addr
+        self.name = name
 
-def mensagem_tcp(mensagem):
+        self.ready = False
+        self.loaded = False
+
+        self.score = 0
+    
+    def load_info(self, idx_spawn: int):
+        return {"name": self.name, "spawn": idx_spawn}
+
+
+# ID para o próximo jogador, vai incrementando
+global prox_id
+prox_id = 0
+
+# Dicionário que leva id -> Player
+global jogadores
+jogadores: dict[int, Player] = {}
+
+# Dicionário que leva socket -> id
+global conexoes
+conexoes: dict[socket, int] = {}
+
+# Informações do jogo
+QTD_SPAWNPOINTS = 8
+
+def remover_cliente(cli: socket):
+    if cli in clientes:
+        clientes.remove(cli)
+        print(conexoes)
+        id = conexoes.get(cli)
+        if (id != None):
+            del jogadores[id]
+            del conexoes[cli]
+        print(f"Cliente removido com ID: {id}")
+
+
+def mensagem_tcp(msg: str):
     cli: socket
     for cli in list(clientes):
         try:
-            cli.sendall(mensagem)
+            cli.sendall(msg.encode("utf-8"))
         except Exception:
             # Um erro pra enviar msg significa que não está mais conectado
-            if cli in clientes:
-                clientes.remove(cli)
+            remover_cliente(cli)
 
-def thread_tcp(connectionSocket, addr):
+def thread_tcp(conn, addr):
+    global prox_id
+    global jogadores
+    global conexoes
+
+    p_id: int = -1
+
     print(f"[TCP] Novo cliente conectado: {addr}")
-    clientes.append(connectionSocket)
+    clientes.append(conn)
 
     try:
         while True:
-            data = connectionSocket.recv(1024)
+            data = conn.recv(1024)
             if not data:
                 break
-            print(f"[TCP] Mensagem reecbida de {addr}: {data.decode().strip()}")
-            connectionSocket.sendall("TCP recebido.".encode("utf-8"))
-            # print("[DEBUG] clientes conectados: ", clientes)
+            msg: str = data.decode().strip()
+            print(f"[TCP] Mensagem recebida de {addr}: {msg}")
+
+            cmd = msg.split(maxsplit=1)
+
+            # Adicionar novo jogador à lista do servidor
+            # 'ADDPLAYER [player_name]'
+            if cmd[0] == 'ADDPLAYER':
+                p_id = prox_id
+
+                conexoes[conn] = p_id
+                jogadores[p_id] = Player(addr, cmd[1])
+                conn.sendall(f'SET_ID {p_id}'.encode("utf-8"))
+
+                prox_id += 1
+
+            
+            # Marcar jogador como preparado pro inicio do jogo, e verifica se todos estão prontos
+            # 'READY'
+            elif cmd[0] == 'READY':
+                jogadores[p_id].ready = True
+
+                qtd_ready = 0
+                qtd_clientes = 0
+                for cli in list(clientes):
+                    id = conexoes[cli]
+                    qtd_clientes += 1
+                    if jogadores.get(id).ready == True: qtd_ready += 1
+                
+                # Todos prontos para começar o jogo
+                if (qtd_clientes == qtd_ready):
+                    print("[DEBUG] Pronto para começar!")
+
+                    ordem_spawn = []
+                    for i in range(0, QTD_SPAWNPOINTS):
+                        ordem_spawn.append(i)
+                    
+                    random.shuffle(ordem_spawn)
+
+                    idx_spawn = 0
+                    info_jogadores = {}
+                    for cli in clientes:
+                        id = conexoes[cli]
+                        info_jogadores[id] = jogadores[id].load_info(ordem_spawn[idx_spawn])
+                        idx_spawn += 1
+                    
+                    info_jogadores = json.dumps(info_jogadores)
+
+                    mensagem_tcp(f"LOAD_GAME {qtd_clientes} {info_jogadores}")
+
+            # Marcar jogador como não-preparado pro início do jogo
+            # 'UNREADY'
+            elif cmd[0] == 'UNREADY':
+                jogadores[p_id].ready = False
+            
+            # Marcar que um jogador carregou o jogo, pronto para começar
+            # 'LOADED'
+            elif cmd[0] == 'LOADED':
+                jogadores[p_id].loaded = True
+
+                qtd_loaded = 0
+                qtd_clientes = 0
+                for cli in list(clientes):
+                    id = conexoes[cli]
+                    qtd_clientes += 1
+                    if jogadores.get(id).loaded == True: qtd_loaded += 1
+                
+                # Todos prontos para começar o jogo
+                if (qtd_clientes == qtd_loaded):
+                    print("[DEBUG] Todos carregados!")
+
+                    mensagem_tcp(f"START_GAME")
+            
+            # Enviar texto para todos os clientes (chats)
+            # 'TEXT [msg...]'
+            elif cmd[0] == 'TEXT':
+                name = jogadores.get(p_id).name
+                mensagem_tcp(f"TEXT {name} {cmd[1]}")
+            
+            # Jogador morreu sozinho
+            # 'DEATH'
+            elif cmd[0] == 'DEATH':
+                # Vai enviar um TCP pros clientes: 'DEATH [id] [idx_respawn]', que "desliga" o jogador morto
+                # em todos os clietes, e o cliente do jogador que morreu respawna no spawn de índice enviado 
+
+                # Morreu sozinho = perde 1 ponto
+                jogadores.get(p_id).score -= 1
+
+                idx_respawn = random.randint(0, QTD_SPAWNPOINTS-1)
+                mensagem_tcp(f"DEATH {p_id} {idx_respawn}")
+            
+            # Jogador matou algum outro
+            # 'KILL [id_alvo] [headshot? 0:1]'
+            elif cmd[0] == 'KILL':
+                # Vai enviar um TCP pros clientes: 'KILL [id_origem] [id_alvo] [idx_respawn] [headshot?]', que "desliga" o jogador morto
+                # em todos os clietes, e o cliente do jogador que morreu respawna no spawn de índice enviado, além de mostrar na tela 
+
+                conteudo = cmd[1].split()
+                id_alvo = int(conteudo[0])
+                headshot = int(conteudo[1])
+
+                # Se for headshot, ganha 2 pontos
+                if (headshot == 1):
+                    jogadores.get(p_id).score += 2
+                else:
+                    jogadores.get(p_id).score += 1
+
+                idx_respawn = random.randint(0, QTD_SPAWNPOINTS-1)
+                mensagem_tcp(f"KILL {p_id} {id_alvo} {idx_respawn} {headshot}")
     finally:
-        if connectionSocket in clientes:
-            clientes.remove(connectionSocket)
-        connectionSocket.close()
+        remover_cliente(conn)
+        
+        conn.close()
         print(f"[TCP] Cliente desconectou: {addr}")
 
 def server_tcp(PORT):
@@ -82,11 +235,21 @@ def server_udp(PORT: int):
             
             # Decode bytes to a string
             message = data.decode('utf-8')
-            print(f"[UDP] Mensagem recebida de {client_address}: {message}")
-            
-            # 4. Optional: Send an echo response back to the client
-            response = f"Echo: {message}"
-            socket_udp.sendto(response.encode('utf-8'), client_address)
+
+            cmd: list[str] = message.split(maxsplit=1)
+            if cmd[0] == 'POS':
+                conteudo: list[str] = cmd[1].split(maxsplit=1)
+                recv_id: int = int(conteudo[0])
+                recv_pos: str = conteudo[1]
+
+
+                response = f"POS {recv_id} {recv_pos}".encode('utf-8')
+
+                for jog_id in jogadores.keys():
+                    if jog_id != recv_id:
+                        jog = jogadores[jog_id]
+                        addr = jog.addr
+                        socket_udp.sendto(response, addr)
             
         except KeyboardInterrupt:
             print("Desligando o UDP")
