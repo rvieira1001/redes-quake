@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://mgaqfmg3jmxi"]
+
+[ext_resource type="Script" uid="uid://mabfp8tgid5p" path="res://Jogo/Player/Scripts/HeadInfoScript.gd" id="1_xi1vx"]
+
+[node name="HeadInfo" type="Node3D" unique_id=918787320]
+script = ExtResource("1_xi1vx")
+
+[node name="PlayerName" type="Label3D" parent="." unique_id=1790995240]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.194686, 0)
+billboard = 1
+texture_filter = 0
+text = "playername"
+font_size = 28
+outline_size = 8

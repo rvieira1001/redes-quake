@@ -76,5 +76,11 @@ alignment = 1
 layout_mode = 2
 text = "Enviar"
 
+[node name="bt_ready" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1700461373]
+layout_mode = 2
+disabled = true
+text = "NOT READY"
+
 [connection signal="pressed" from="CenterContainer/VBoxContainer/bt_connect" to="." method="_on_bt_connect_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/bt_sendMsg" to="." method="_on_bt_send_msg_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/bt_ready" to="." method="_on_bt_ready_pressed"]

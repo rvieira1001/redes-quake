@@ -8,6 +8,11 @@ extends Control
 @onready var input_serverPort : LineEdit = $CenterContainer/VBoxContainer/input_portaServer
 
 @onready var input_msg : LineEdit = $CenterContainer/VBoxContainer/input_msg
+@onready var button_ready : Button = $CenterContainer/VBoxContainer/bt_ready
+var is_ready: bool = false
+
+func _ready() -> void:
+	CLIENT.menu_node = self
 
 func _on_bt_connect_pressed() -> void:
 	if not input_playerName.text.is_valid_ascii_identifier():
@@ -33,7 +38,23 @@ func _on_bt_connect_pressed() -> void:
 	var server_port = int(input_serverPort.text)
 	
 	CLIENT.create_connection(player_name, local_port, server_ip, server_port)
+	
+	await get_tree().create_timer(1.0).timeout
+	
+	if CLIENT.tcp_peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+		button_ready.disabled = false
 
 func _on_bt_send_msg_pressed() -> void:
-	CLIENT.udp_send_msg(input_msg.text)
-	CLIENT.tcp_send_msg(input_msg.text)
+	CLIENT.tcp_send_msg("TEXT " + input_msg.text)
+
+
+func _on_bt_ready_pressed() -> void:
+	if not is_ready:
+		is_ready = true
+		CLIENT.tcp_send_msg("READY")
+		button_ready.text = "READY"
+	else:
+		is_ready = false
+		CLIENT.tcp_send_msg("UNREADY")
+		button_ready.text = "NOT READY"
+		

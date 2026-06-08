@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://cy1gn2j8b0puf"]
+
+[ext_resource type="Texture2D" uid="uid://cr7slv214ub4u" path="res://Jogo/Placeholders/Tile.png" id="1_onovn"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fn23m"]
+albedo_color = Color(0.466181, 0.466181, 0.466181, 1)
+albedo_texture = ExtResource("1_onovn")
+uv1_scale = Vector3(35.46, 35.46, 35.46)
+texture_filter = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_x1idy"]
+material = SubResource("StandardMaterial3D_fn23m")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ofhm7"]
+
+[node name="Map" type="Node3D" unique_id=1691864108 groups=["Map"]]
+
+[node name="Structure" type="Node3D" parent="." unique_id=388169384]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Structure" unique_id=1674486847 groups=["Map"]]
+transform = Transform3D(60, 0, -5.24537e-06, 0, -0.011, 0, 5.24537e-06, 0, 60, 0, -1.11402, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Structure/StaticBody3D" unique_id=1040704508]
+mesh = SubResource("BoxMesh_x1idy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Structure/StaticBody3D" unique_id=1625504636]
+shape = SubResource("BoxShape3D_ofhm7")
+
+[node name="StaticBody3D2" type="StaticBody3D" parent="Structure" unique_id=953112410 groups=["Map"]]
+transform = Transform3D(-7.27218, 0, 1.59747e-06, 0, 11.3123, 0, -1.09807e-06, 0, -10.5796, -4.09603, 1.66434, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Structure/StaticBody3D2" unique_id=2000357333]
+mesh = SubResource("BoxMesh_x1idy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Structure/StaticBody3D2" unique_id=1662293214]
+shape = SubResource("BoxShape3D_ofhm7")
+
+[node name="Spawners" type="Node3D" parent="." unique_id=272416231]
+
+[node name="-1" type="Node3D" parent="Spawners" unique_id=1377984892]
+
+[node name="Spawner1" type="Marker3D" parent="Spawners/-1" unique_id=1767940198]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 17.0335)
+
+[node name="Spawner2" type="Marker3D" parent="Spawners/-1" unique_id=1861941644]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -11.1983)
+
+[node name="Spawner3" type="Marker3D" parent="Spawners/-1" unique_id=398998205]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.0942, 3, -11.1983)
+
+[node name="Spawner4" type="Marker3D" parent="Spawners/-1" unique_id=1191508070]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.0746, 3, 7.04405)
