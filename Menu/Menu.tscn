@@ -35,6 +35,13 @@ placeholder_text = "Nome do Jogador"
 alignment = 1
 max_length = 16
 
+[node name="input_playerColor" type="ColorPickerButton" parent="CenterContainer/VBoxContainer" unique_id=606174036]
+layout_mode = 2
+text = "Cor do Jogador"
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+edit_intensity = false
+
 [node name="input_portaLocal" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1608662680]
 layout_mode = 2
 placeholder_text = "Porta local"
@@ -63,18 +70,9 @@ text = "Connect"
 
 [node name="label_conexao" type="Label" parent="CenterContainer/VBoxContainer" unique_id=678334107]
 layout_mode = 2
-text = "Conexão"
+text = "Não conectado"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="input_msg" type="LineEdit" parent="CenterContainer/VBoxContainer" unique_id=1474014834]
-layout_mode = 2
-placeholder_text = "Mensagem"
-alignment = 1
-
-[node name="bt_sendMsg" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1183374497]
-layout_mode = 2
-text = "Enviar"
 
 [node name="bt_ready" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1700461373]
 layout_mode = 2
@@ -82,5 +80,4 @@ disabled = true
 text = "NOT READY"
 
 [connection signal="pressed" from="CenterContainer/VBoxContainer/bt_connect" to="." method="_on_bt_connect_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/bt_sendMsg" to="." method="_on_bt_send_msg_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/bt_ready" to="." method="_on_bt_ready_pressed"]

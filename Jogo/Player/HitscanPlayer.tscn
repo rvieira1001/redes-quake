@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://mgaqfmg3jmxi" path="res://Jogo/Player/Scripts/HeadInfo.tscn" id="3_7mj4q"]
 [ext_resource type="Texture2D" uid="uid://ccn4obeit6t0l" path="res://Jogo/Placeholders/Crosshair.png" id="5_mmwfg"]
 [ext_resource type="Script" uid="uid://yyojntfp0clk" path="res://Jogo/Player/player_hud.gd" id="5_uefbt"]
+[ext_resource type="Texture2D" uid="uid://cvo0pfwnpwk5a" path="res://Jogo/Placeholders/HitIndicator.png" id="6_uefbt"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_owkai"]
 albedo_color = Color(0.406475, 0.3053, 0.71, 1)
@@ -73,12 +74,10 @@ skeleton = NodePath("../..")
 
 [node name="HitscanRaycastBody" type="RayCast3D" parent="Neck/Camera3D" unique_id=503168783]
 target_position = Vector3(0, 0, -30)
-collision_mask = 5
 collide_with_areas = true
 
 [node name="HitscanRaycastArea" type="RayCast3D" parent="Neck/Camera3D" unique_id=612632804]
 target_position = Vector3(0, 0, -30)
-collision_mask = 4
 collide_with_areas = true
 collide_with_bodies = false
 
@@ -135,3 +134,19 @@ offset_bottom = 7.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("5_mmwfg")
+
+[node name="HitIndicator" type="TextureRect" parent="CanvasLayer/PlayerHUD" unique_id=883613955]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_uefbt")

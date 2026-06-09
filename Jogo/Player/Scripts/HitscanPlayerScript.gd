@@ -3,6 +3,8 @@ extends CharacterBody3D
 @onready var generic = $GenericPlayerScript
 @onready var hud = $CanvasLayer/PlayerHUD
 
+@onready var p_id: int = -1
+
 @onready var hitscan_raycast_area = $Neck/Camera3D/HitscanRaycastArea
 @onready var hitscan_raycast_body = $Neck/Camera3D/HitscanRaycastBody
 
@@ -11,20 +13,32 @@ extends CharacterBody3D
 
 var hitscan_timer = 0
 @export var HITSCAN_DELAY = 3.0
-@export var HITSCAN_DMG = 800
-@export var HITSCAN_HS = 1.5
 
 @onready var mesh_body = $MeshBody
-@onready var mesh_head = $Neck
+@onready var mesh_head = $Neck/Camera3D/MeshHead
+@onready var mesh_view = $Neck/Camera3D/MeshView
+@onready var neck = $Neck
 
 func hide_body():
 	mesh_body.hide()
-	mesh_head.hide()
+	neck.hide()
 
-func init_player(id: int, playername: String, is_local: bool) -> void:
+func set_mesh_color(color: Color):
+	var new_mat = StandardMaterial3D.new()
+	new_mat.albedo_color = color
+	
+	mesh_body.set_surface_override_material(0, new_mat)
+	mesh_head.set_surface_override_material(0, new_mat)
+	mesh_view.set_surface_override_material(0, new_mat)
+
+func init_player(id: int, playername: String, playercolor: Color, is_local: bool) -> void:
 	CLIENT.players[str(id)] = self
 	
-	generic.set_local_player(is_local, playername)
+	p_id = id
+	
+	set_mesh_color(playercolor)
+	
+	generic.set_local_player(is_local, id, playername)
 	hud.visible = is_local
 
 func _process(delta: float) -> void:
@@ -39,24 +53,35 @@ func _physics_process(delta: float) -> void:
 			if Input.is_action_just_pressed("mouse_1") and (hitscan_timer == 0):
 				hitscan_timer = HITSCAN_DELAY
 				hud.blink_crosshair()
-				#shoot_hitscan.rpc(hitscan_position.global_transform)
+				
+				# Atira localmente, pra saber se acertou
+				shoot_hitscan(hitscan_position.global_position.x, hitscan_position.global_position.y, hitscan_position.global_position.z, hitscan_position.global_rotation.x, hitscan_position.global_rotation.y, hitscan_position.global_rotation.y)
+				# Avisa do tiro pro TCP, só vai rodar se não for do ID local
+				CLIENT.tcp_send_msg("SHOOT %.2f,%.2f,%.2f,%.2f,%.2f,%.2f" % [hitscan_position.global_position.x, hitscan_position.global_position.y, hitscan_position.global_position.z, hitscan_position.global_rotation.x, hitscan_position.global_rotation.y, hitscan_position.global_rotation.y])
 
-func update_pos(new_pos_str: String):
-	var new_pos = new_pos_str.split("|")
-	global_position = str_to_var("Vector3"+new_pos[0])
-	global_rotation = str_to_var("Vector3"+new_pos[1])
-	generic.neck.global_rotation = str_to_var("Vector3"+new_pos[2])
+func update_pos(pos_x: float, pos_y: float, pos_z: float, rot_x: float, rot_y: float):
+	global_position.x = pos_x
+	global_position.y = pos_y
+	global_position.z = pos_z
+	
+	generic.neck.global_rotation.x = rot_x
+	generic.neck.global_rotation.y = rot_y
 
-func shoot_hitscan(angle):
-	hitscan_mesh.global_transform = angle
+func shoot_hitscan(pos_x: float, pos_y: float, pos_z: float, rot_x: float, rot_y: float, rot_z: float):
+	hitscan_mesh.global_position.x = pos_x
+	hitscan_mesh.global_position.y = pos_y
+	hitscan_mesh.global_position.z = pos_z
+	
+	hitscan_mesh.global_rotation.x = rot_x
+	hitscan_mesh.global_rotation.y = rot_y
+	hitscan_mesh.global_rotation.z = rot_z
 	
 	if not generic.is_local_player:
 		hitscan_mesh.show()
-	detect_shoot_target()
-	
-	await get_tree().create_timer(0.3).timeout
-	
-	hitscan_mesh.hide()
+		await get_tree().create_timer(0.3).timeout
+		hitscan_mesh.hide()
+	else:
+		detect_shoot_target()
 
 func detect_shoot_target() -> void:
 	var targetA = hitscan_raycast_area.get_collider()
@@ -67,19 +92,22 @@ func detect_shoot_target() -> void:
 			if targetB.is_in_group("Map"):
 				return
 		
-		var b_gen = targetA.get("generic")
-		var final_damage = HITSCAN_DMG
-		var crosshair_color = Color.WHITE
+		var target_generic = targetA.get("generic")
+		var indicator_color = Color.WHITE
+		var target_id: int = -1
 		
+		var is_headshot = 0
 		if "Hitbox" in targetA.name:
-			b_gen = targetA.owner.get("generic")
+			target_generic = targetA.owner.get("generic")
+			target_id = target_generic.p_body.p_id
 			if "Head" in targetA.name:
-				final_damage *= HITSCAN_HS
-				crosshair_color = Color.ORANGE_RED
+				is_headshot = 1
+				indicator_color = Color.ORANGE_RED
 			
-		if b_gen != null: # Is collision_body
-			if generic.is_local_player and b_gen.has_method("take_damage") and (b_gen.get("alive") == true):
-				var target_team = b_gen.get("team")
-				if (target_team == -1) or (target_team == null) or (target_team != generic.team):
-					generic.hud.blink_indicator(crosshair_color)
-					b_gen.take_damage.rpc(final_damage, multiplayer.get_unique_id())
+		if target_generic != null: # Is collision_body
+			if generic.is_local_player and (target_generic.get("alive") == true):
+				hud.blink_indicator(indicator_color)
+				CLIENT.tcp_send_msg("KILL %d %d" % [target_id, is_headshot])
+
+func die(idx_respawn: int):
+	generic.die(idx_respawn)

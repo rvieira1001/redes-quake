@@ -3,7 +3,7 @@ class_name GenericPlayerScript
 
 const RESPAWN_TIME = 3.0
 
-@onready var p_body = get_parent()
+@onready var p_body: CharacterBody3D = get_parent()
 @onready var head_info: Node3D = get_node("HeadInfo")
 
 @onready var is_local_player = false
@@ -61,7 +61,8 @@ func _process(delta: float) -> void:
 			
 			# Morreu caindo do mapa
 			if global_position.y < -30:
-				CLIENT.tcp_send_msg("DEATH " + str(CLIENT.my_id))
+				alive = false
+				CLIENT.tcp_send_msg("DEATH")
 
 func _physics_process(delta: float) -> void:
 	if is_local_player and CLIENT.game_started:
@@ -105,17 +106,17 @@ func _physics_process(delta: float) -> void:
 			
 			p_body.move_and_slide()
 			
-			var my_pos = str(p_body.global_position) + "|" + str(p_body.global_rotation) + "|(" + str(camera.global_rotation.x) + "," + str(neck.global_rotation.y) + ", 0.0)"
-			CLIENT.udp_send_msg("POS %d %s" % [CLIENT.my_id, my_pos])
+			CLIENT.udp_send_pos(global_position.x, global_position.y, global_position.z, camera.global_rotation.x, neck.global_rotation.y)
+			#CLIENT.udp_send_msg("POS %d %s" % [CLIENT.my_id, my_pos])
 
-func set_local_player(value:bool, playername: String):
+func set_local_player(value: bool, id: int, playername: String):
 	is_local_player = value
 	camera.current = value
 	
 	head_info.visible = not value
 	head_info.player_name_label.text = playername
 
-func die(dying_player_id:int):
+func die(idx_respawn: int):
 	alive = false
 	p_body.hide()
 	p_body.collision_layer = 0
@@ -124,11 +125,12 @@ func die(dying_player_id:int):
 	await get_tree().create_timer(RESPAWN_TIME).timeout
 	
 	if is_local_player:
-		pass
-		#SERVER.game_node.respawn_player(dying_player_id)
+		var spawners = CLIENT.main_node.get_spawn_list()
+		p_body.global_position = spawners[idx_respawn].global_position
+	else:
+		await get_tree().create_timer(0.5).timeout
 	
 	alive = true
-	p_body.hide()
+	p_body.show()
 	p_body.collision_layer = 1
 	p_body.collision_mask = 1
-	pass

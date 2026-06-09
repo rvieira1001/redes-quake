@@ -20,7 +20,7 @@ func load_map(qtd_players: int, info_players: Dictionary) -> void:
 	load_players(qtd_players, info_players)
 
 func load_players(qtd: int, info_players: Dictionary) -> void:
-	var spawners = mapa.find_child("Spawners").get_children()
+	var spawners = get_spawn_list()
 	var players_parent = mapa.find_child("Players")
 	
 	for s_id in info_players.keys():
@@ -33,8 +33,10 @@ func load_players(qtd: int, info_players: Dictionary) -> void:
 		players_parent.add_child(inst_player)
 		
 		inst_player.global_position = spawners[info['spawn']].global_position
-		
-		inst_player.init_player(id, info['name'], id == CLIENT.my_id)
+		inst_player.init_player(id, info['name'], Color(info['color']), id == CLIENT.my_id)
 	
 	CLIENT.tcp_send_msg("LOADED")
 	CLIENT.menu_node.hide()
+
+func get_spawn_list() -> Array[Node]:
+	return mapa.find_child("Spawners").get_children()
