@@ -35,6 +35,8 @@ Você pode obter o cliente e servidor de duas formas:
     - Caso não mude depois de ~2-3 segundos, houve algum erro na conexão.
 - Quando todos os clientes/jogadores estiverem conectados, clique no último botão até que todos estejam **READY**
 
+**OBS:** O código no Godot que se comunica com o servidor está em `Globals/CLIENT.gd`, o restante é voltado ao funcionamento do jogo em si.
+
 ## Funcionalidades implementadas
 - Movimento sincronizado entre clientes
 - Tiros são sinalizados com um feixe vermelho
