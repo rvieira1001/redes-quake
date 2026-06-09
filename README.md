@@ -6,6 +6,8 @@ O trabalho conta com a sincronização do movimento dos jogadores de forma rápi
 
 Um desafio do trabalho foi manter e administrar essa conexão e instruções entre os programas, uma vez que a comunicação entre clientes foi feita totalmente através do servidor Python, ou seja, não foi usada nenhuma função do Godot que era pré-feita para Multiplayer, somente a conexão via pacotes e sockets UDP e TCP. 
 
+<img width="1824" height="953" alt="exemplo-redes-quake" src="https://github.com/user-attachments/assets/ea8b303d-c5c0-4dad-8604-7e1fc5b00f12" />
+
 ## Tecnologias utilizadas
 - [Godot Engine](https://godotengine.org/pt-br/), que usa GDScript
 - Biblioteca socket e threading de Python
