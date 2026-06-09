@@ -3,8 +3,15 @@
 from socket import *
 import sys  # Para encerrar o programa
 
+# Biblioteca random para escolher onde respawnar um jogador
 import random
+
+# Biblioteca json para enviar dados do jogador ao começar a partida (atualmente, nome e cor)
 import json
+
+# Biblioteca struct pra decodificar o id (int) no UDP
+# (a posição é atualizada enviando bytes "crus", sem formatação, que são decodificados usando esse struct)
+import struct
 
 
 # Importar threading para usar no TCP, a ideia é manter um servidor sempre aceitando novas conexões,
@@ -14,10 +21,13 @@ import threading
 # Cria uma lista pra salvar as conexões TCP, e enviar para todas sempre que precisar
 clientes = []
 
+# Classe player que armazena dados do jogador, principalmente pra conseguir diferenciar um do
+# outro na pontuação e saber se todos estão prontos e se carregaram a partida direitinho
 class Player:
-    def __init__(self, addr: socket, name: str):
+    def __init__(self, addr: socket, name: str, color: str):
         self.addr = addr
         self.name = name
+        self.color = color
 
         self.ready = False
         self.loaded = False
@@ -25,10 +35,10 @@ class Player:
         self.score = 0
     
     def load_info(self, idx_spawn: int):
-        return {"name": self.name, "spawn": idx_spawn}
+        return {"name": self.name, "color": self.color, "spawn": idx_spawn}
 
 
-# ID para o próximo jogador, vai incrementando
+# ID para o próximo jogador, vai incrementando pra cada jogador ter um ID único
 global prox_id
 prox_id = 0
 
@@ -41,12 +51,22 @@ global conexoes
 conexoes: dict[socket, int] = {}
 
 # Informações do jogo
-QTD_SPAWNPOINTS = 8
+QTD_SPAWNPOINTS = 8 # Quantidade de spawnpoints que um índice será escolhido aleatoriamente, define a quantidade máxima de jogadores, já que o spawn é diferente inicialmente
 
+
+# Imprime o placar no console, eventualmente a ideia é passar pra tela do cliente
+def imprime_placar():
+    str_placar = "PLACAR:\n"
+    for jog in jogadores.values():
+        str_placar += f"{jog.name}  =  {jog.score}\n"
+
+    print(str_placar)
+
+
+# Remove um jogador/cliente de todas as listas relacionadas a ele
 def remover_cliente(cli: socket):
     if cli in clientes:
         clientes.remove(cli)
-        print(conexoes)
         id = conexoes.get(cli)
         if (id != None):
             del jogadores[id]
@@ -54,6 +74,7 @@ def remover_cliente(cli: socket):
         print(f"Cliente removido com ID: {id}")
 
 
+# Envia uma mensagem TCP pra todos os clientes salvos na lista de clientes
 def mensagem_tcp(msg: str):
     cli: socket
     for cli in list(clientes):
@@ -63,6 +84,8 @@ def mensagem_tcp(msg: str):
             # Um erro pra enviar msg significa que não está mais conectado
             remover_cliente(cli)
 
+
+# Thread TCP que conecta a um único cliente (p_id é o ID individual desse jogador)
 def thread_tcp(conn, addr):
     global prox_id
     global jogadores
@@ -83,13 +106,21 @@ def thread_tcp(conn, addr):
 
             cmd = msg.split(maxsplit=1)
 
+            # cmd[0] é o "opcode" da função, vai dizer o que faz
+            # cmd[1] é o resto da função, que vai ser tratada conforme forem precisos os argumentos
+
+            # Muitas funções são "repassadas" pro cliente de forma semelhante, pq o cliente aborda de maneira diferente do servidor
+            # A maior diferença é que o servidor passa para todos os clientes, então precisa avisar qual o ID do cliente que enviou a mensagem
+
             # Adicionar novo jogador à lista do servidor
             # 'ADDPLAYER [player_name]'
             if cmd[0] == 'ADDPLAYER':
                 p_id = prox_id
 
+                info: list[str] = cmd[1].split()
+
                 conexoes[conn] = p_id
-                jogadores[p_id] = Player(addr, cmd[1])
+                jogadores[p_id] = Player(addr, info[0], info[1])
                 conn.sendall(f'SET_ID {p_id}'.encode("utf-8"))
 
                 prox_id += 1
@@ -128,11 +159,13 @@ def thread_tcp(conn, addr):
 
                     mensagem_tcp(f"LOAD_GAME {qtd_clientes} {info_jogadores}")
 
+
             # Marcar jogador como não-preparado pro início do jogo
             # 'UNREADY'
             elif cmd[0] == 'UNREADY':
                 jogadores[p_id].ready = False
             
+
             # Marcar que um jogador carregou o jogo, pronto para começar
             # 'LOADED'
             elif cmd[0] == 'LOADED':
@@ -151,12 +184,14 @@ def thread_tcp(conn, addr):
 
                     mensagem_tcp(f"START_GAME")
             
-            # Enviar texto para todos os clientes (chats)
+
+            # Enviar texto para todos os clientes (chats) -- OBS: Função não tem origem no cliente, pretendo fazer um chat de texto
             # 'TEXT [msg...]'
             elif cmd[0] == 'TEXT':
                 name = jogadores.get(p_id).name
                 mensagem_tcp(f"TEXT {name} {cmd[1]}")
             
+
             # Jogador morreu sozinho
             # 'DEATH'
             elif cmd[0] == 'DEATH':
@@ -166,9 +201,12 @@ def thread_tcp(conn, addr):
                 # Morreu sozinho = perde 1 ponto
                 jogadores.get(p_id).score -= 1
 
+                imprime_placar()
+
                 idx_respawn = random.randint(0, QTD_SPAWNPOINTS-1)
                 mensagem_tcp(f"DEATH {p_id} {idx_respawn}")
             
+
             # Jogador matou algum outro
             # 'KILL [id_alvo] [headshot? 0:1]'
             elif cmd[0] == 'KILL':
@@ -185,14 +223,30 @@ def thread_tcp(conn, addr):
                 else:
                     jogadores.get(p_id).score += 1
 
+                imprime_placar()
+
                 idx_respawn = random.randint(0, QTD_SPAWNPOINTS-1)
                 mensagem_tcp(f"KILL {p_id} {id_alvo} {idx_respawn} {headshot}")
+            
+
+            # Jogador anunciou um tiro (faz mostrar a trajetoria)
+            # 'SHOOT [vetores de posicao/rotacao]
+            elif cmd[0] == 'SHOOT':
+                # Vai repassar o valor do argumento pros clientes, o cliente vai fazer a trajetoria do tiro aparecer na posição certa (chamando função relacionada)
+
+                mensagem_tcp(f"SHOOT {p_id} {cmd[1]}")
+
     finally:
+        # Quando um cliente for desconectar, envia um aviso pros outros clientes tirarem o player do mapa deles
         remover_cliente(conn)
+
+        mensagem_tcp(f"REMOVE_PLAYER {p_id}")
         
         conn.close()
         print(f"[TCP] Cliente desconectou: {addr}")
 
+
+# Servidor TCP que vai ficar ouvindo o accept() e criando threads pra cada cliente novo
 def server_tcp(PORT):
     socket_tcp = socket(AF_INET, SOCK_STREAM)
 
@@ -214,10 +268,14 @@ def server_tcp(PORT):
             thread_cli = threading.Thread(target=thread_tcp, args=(connectionSocket, addr))
             thread_cli.daemon = True
             thread_cli.start()
+
+            # OBS: Eventualmente, a ideia é "travar" novas conexões depois que o jogo iniciar
     finally:
         print("Desligando o TCP de accept()")
         socket_tcp.close()
 
+
+# Servidor UDP, que recebe e transmite a posição de um jogador pros demais
 def server_udp(PORT: int):
     # Criação de socket UDP (Flag SOCK_DGRAM)
     socket_udp = socket(AF_INET, SOCK_DGRAM)
@@ -229,34 +287,27 @@ def server_udp(PORT: int):
 
     while True:
         try:
-            # Read incoming data (buffer size is 1024 bytes)
-            # recvfrom() returns the payload data and the sender's (IP, port) tuple
             data, client_address = socket_udp.recvfrom(1024)
             
-            # Decode bytes to a string
-            message = data.decode('utf-8')
-
-            cmd: list[str] = message.split(maxsplit=1)
-            if cmd[0] == 'POS':
-                conteudo: list[str] = cmd[1].split(maxsplit=1)
-                recv_id: int = int(conteudo[0])
-                recv_pos: str = conteudo[1]
-
-
-                response = f"POS {recv_id} {recv_pos}".encode('utf-8')
-
-                for jog_id in jogadores.keys():
-                    if jog_id != recv_id:
-                        jog = jogadores[jog_id]
-                        addr = jog.addr
-                        socket_udp.sendto(response, addr)
+            # Primeiro byte = ID (int) de quem enviou
+            recv_id = struct.unpack('<i', data[0:4])[0]
+            
+            # Envia pros demais jogadores
+            for jog_id in jogadores.keys():
+                if jog_id != recv_id:
+                    jog = jogadores[jog_id]
+                    addr = jog.addr
+                    socket_udp.sendto(data, addr)
+            
+            # OBS: Uma forma de deixar "seguro" seria criar uma lista de endereços conhecidos antes do
+            # início do jogo, e depois sempre verificar se o endereço que enviou está nessa "whitelist"
             
         except KeyboardInterrupt:
             print("Desligando o UDP")
             socket_udp.close()
             break
     
-
+# Main, só pra ficar separada da raíz do código python
 def main():
     # Input pra escolher a porta dos dois servidores
     PORT = int(input("Informe a porta desejada: "))
@@ -276,5 +327,6 @@ def main():
 
 
     sys.exit()  # Termina o programa após enviar os dados correspondentes
+
 
 main()
