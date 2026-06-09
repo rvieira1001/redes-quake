@@ -47,10 +47,12 @@ Você pode obter o cliente e servidor de duas formas:
 - Servidor e clientes tratam corretamente um jogador saindo no meio da partida
 
 ## Possíveis melhorias futuras
+- Codificar os códigos TCP em bytes "crus", ao invés de textos ascii para economizar bytes enviados
 - Adicionar um chat de texto (já criei o protocolo TCP 'TEXT [msg]', mas não é usado)
 - Colocar um "histórico de abates" na HUD, listando quem acertou quem
 - Colocar o placar de pontuação na tela (atualmente apenas no console do servidor)
 - Melhorar esteticamente o jogo (adicionando sons e trocando texturas de prototipagem)
+- Modificar o mapa do jogo, ou adicionar mais mapas
 - Corrigir eventuais bugs que forem descobertos
 
 ## Bugs conhecidos
