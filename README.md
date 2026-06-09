@@ -28,6 +28,7 @@ Você pode obter o cliente e servidor de duas formas:
 - Extraia o zip, e abra o cliente pelo arquivo `.x86_64`, ou pelo `.sh` (que abre com um console de debug)
 
 ## Como testar
+**CONTROLES:** WASD - Movimento; Mouse esquerdo - Atirar; ESC - Destravar mouse;
 - Inicie o servidor com `python server.py` e escolha uma porta para abrir o TCP/UDP
 - Inicie alguns clientes (Máx. 8) conforme as instruções acima
 - Insira o nome do jogador, escolha uma cor e coloque a porta do cliente.
