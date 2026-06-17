@@ -1,4 +1,4 @@
-# Trabalho de Redes - Quake simpificado
+# Trabalho de Redes - Quake simplificado
 
 Um protótipo de jogo estilo Quake, feito na [Godot Engine](https://godotengine.org/pt-br/) e conectado usando um servidor TCP/UDP em Python.
 
